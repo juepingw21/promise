@@ -37,19 +37,32 @@ class HD {
             this.status = HD.FULFILLED;
             this.value = value;
 
-            
             /**
-             * If the resolve() called is placed to event queue, we need to run statements in then() 
-             * 
+             * If the resolve() called is placed to event queue, we need to run statements in then().
+             * Also, the statements in then() need to yeid the statements after the resolve()
+             *
              * For example:
              *    let p = new Promise((resolve, reject)=>{
+             *         console.log("before setTimeout")
              *         setTimeout(()=>{
              *             resolve("wait for 5 seconds");
+             *              console.log("statements after the resolve()")
              *         }, 5000);
-             *    }).then(value=>{...});
+             *         console.log("before setTimeout")
+             *    }).then(value => console.log(value));
+             * console.log("hello")
+             *
+             * Output:
+             * before setTimeout
+             * before setTimeout
+             * hello
+             * statements after the resolve()
+             * wait for 5 seconds
              */
-            this.callbacks.map((callback) => {
-                callback.resolve(value);
+            setTimeout(() => {
+                this.callbacks.map((callback) => {
+                    callback.resolve(value);
+                });
             });
         }
     }
@@ -60,17 +73,14 @@ class HD {
             this.value = reason;
 
             /**
-             * If the reject() called is placed to event queue, we need to run statements in then() 
-             * 
-             * For example:
-             *    let p = new Promise((resolve, reject)=>{
-             *         setTimeout(()=>{
-             *             reject("wait for 5 seconds");
-             *         }, 5000);
-             *    }).then(null, reason => {...});
+             * If the reject() called is placed to event queue, we need to run statements in then()
+             * Also, the statements in then() need to yeid the statements after the reject()
+             * More information: see function resolve()
              */
-            this.callbacks.map((callback) => {
-                callback.onRejected(reason);
+            setTimeout(() => {
+                this.callbacks.map((callback) => {
+                    callback.onRejected(reason);
+                });
             });
         }
     }
@@ -127,19 +137,19 @@ class HD {
 
         /**
          * Promise state is HD.PENDING
-         * 
+         *
          * If reslove() or reject() are placed in the event queue, statements in then() need to wait
          * for reslove() or reject() to be called.
-         * 
+         *
          * We put statements in then() into a callback queue
-         * 
+         *
          */
         if (this.status == HD.PENDING) {
             this.callbacks.push({
                 /**
                  * Executes onFulfilled(value) if there is no error in onFulfilled(value).
                  * Otherwise, executes onRejected(error);
-                 * 
+                 *
                  * @param {*} value the value from reslove(value)
                  */
                 onFulfilled: (value) => {
@@ -154,7 +164,7 @@ class HD {
                 /**
                  * Executes onRejected(value) if there is no error in onRejected(value).
                  * Otherwise, executes onRejected(error);
-                 * 
+                 *
                  * @param {*} value the value from reject(value)
                  */
                 onRejected: (value) => {
@@ -170,30 +180,12 @@ class HD {
     }
 }
 
-// let p = new Promise((resolve, reject) => {
-//     // resolve("fulfilled");
-//     reject("rejected");
-// }).then(
-//     (value) => {
-//         console.log(value);
-//     },
-//     (reason) => {
-//         console.log(reason);
-//     }
-// );
-
-let p = new HD((resolve, reject) => {
-    console.log("1");
+let p = new Promise((resolve, reject) => {
+    console.log("before setTimeout");
     setTimeout(() => {
-        console.log("after 1 sec");
-        resolve("3");
-    }, 1000);
-    console.log("2");
-}).then(
-    (value) => {
-        console.log("value", value);
-    },
-    (reason) => {
-        console.log("reason", reason);
-    }
-);
+        resolve("wait for 5 seconds");
+        console.log("statements after the resolve()");
+    }, 5000);
+    console.log("before setTimeout");
+}).then((value) => console.log(value));
+console.log("hello");
